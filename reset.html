@@ -102,8 +102,15 @@ button.main:disabled{opacity:.5;cursor:default}
   var token = params.get("access_token");
   var isRecovery = params.get("type") === "recovery";
   try { history.replaceState(null, "", location.pathname); } catch (e) {}   // remove token from the address bar
+  var errCode = params.get("error_code") || params.get("error") || "";
+  var errDesc = params.get("error_description") || "";
   if (!token || !isRecovery) state = "bad";
   render();
+  if (state === "bad") {
+    var why = errCode ? errCode + (errDesc ? " – " + errDesc.replace(/\+/g, " ") : "")
+                      : (!token ? "no token in link" : "type=" + (params.get("type") || "none"));
+    $("msg").textContent += "  [" + why + "]";
+  }
 
   function say(cls, text) { $("msg").className = "msg " + cls; $("msg").textContent = text; }
 
