@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Livegift – Reset password</title>
+<style>
+:root{--bg:#fbf7f8;--card:#fff;--fg:#201418;--mut:#7a6670;--line:#e8d9df;--acc:#c8245f;--acc2:#e8447f;--ok:#16794a;--err:#b3261e}
+@media(prefers-color-scheme:dark){:root{--bg:#171014;--card:#221820;--fg:#f4eaee;--mut:#b49aa5;--line:#3a2a32;--acc:#ff6a9a;--acc2:#ff8fb3;--ok:#5fd39b;--err:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:20px}
+main{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 22px}
+.gift{font-size:44px;text-align:center}
+h1{font-size:22px;margin:6px 0 4px;text-align:center}
+p{margin:6px 0;color:var(--mut)}
+label{display:block;margin:14px 0 6px;font-weight:600;font-size:14px}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:16px;direction:ltr}
+button.main{width:100%;margin-top:18px;padding:14px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+button.main:disabled{opacity:.5;cursor:default}
+.msg{margin-top:14px;font-size:15px;min-height:1.4em}
+.ok{color:var(--ok)}.err{color:var(--err)}
+.lang{display:flex;gap:8px;justify-content:center;margin-bottom:10px}
+.lang button{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:99px;padding:4px 14px;cursor:pointer;font-size:14px}
+.lang button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <div class="lang" role="group" aria-label="Language">
+    <button data-l="en">English</button><button data-l="de">Deutsch</button><button data-l="fa">فارسی</button>
+  </div>
+  <div class="gift">🎁</div>
+  <h1 id="t_title"></h1>
+
+  <form id="form" autocomplete="off" hidden>
+    <p id="t_intro"></p>
+    <label for="p1" id="t_p1"></label>
+    <input id="p1" type="password" minlength="6" autocomplete="new-password" required>
+    <label for="p2" id="t_p2"></label>
+    <input id="p2" type="password" minlength="6" autocomplete="new-password" required>
+    <button class="main" id="go" type="submit"></button>
+  </form>
+
+  <p class="msg" id="msg" role="status"></p>
+</main>
+
+<script>
+(function () {
+  var API = "https://wqgnvqrhdpkneqfduexj.supabase.co";
+  var KEY = "sb_publishable_jUYA9uX5yvEt5H48YAES7g_EZy4LlQH"; // public (publishable) key, same as in the app
+
+  var T = {
+    en: { title: "Choose a new password", intro: "Enter a new password for your Livegift account.",
+          p1: "New password (at least 6 characters)", p2: "Repeat the password", go: "Save password",
+          short: "The password must have at least 6 characters.", diff: "The two passwords are not the same.",
+          ok: "Done! Your password was changed. Open Livegift and sign in with your e-mail and the new password.",
+          bad: "This link is not valid or has expired. Please go back to Livegift and tap “Forgot password?” again.",
+          fail: "The password could not be changed. Please try again.", same: "Please choose a password you did not use before." },
+    de: { title: "Neues Passwort festlegen", intro: "Gib ein neues Passwort für dein Livegift-Konto ein.",
+          p1: "Neues Passwort (mindestens 6 Zeichen)", p2: "Passwort wiederholen", go: "Passwort speichern",
+          short: "Das Passwort muss mindestens 6 Zeichen haben.", diff: "Die beiden Passwörter stimmen nicht überein.",
+          ok: "Fertig! Dein Passwort wurde geändert. Öffne Livegift und melde dich mit deiner E-Mail-Adresse und dem neuen Passwort an.",
+          bad: "Dieser Link ist ungültig oder abgelaufen. Gehe zurück zu Livegift und tippe erneut auf „Passwort vergessen?“.",
+          fail: "Das Passwort konnte nicht geändert werden. Bitte versuche es erneut.", same: "Bitte wähle ein Passwort, das du noch nicht benutzt hast." },
+    fa: { title: "رمز جدید انتخاب کن", intro: "برای حساب Livegift خودت یک رمز جدید وارد کن.",
+          p1: "رمز جدید (حداقل ۶ نویسه)", p2: "تکرار رمز", go: "ذخیره‌ی رمز",
+          short: "رمز باید حداقل ۶ نویسه باشد.", diff: "دو رمز یکسان نیستند.",
+          ok: "انجام شد! رمز تو عوض شد. Livegift را باز کن و با ایمیل و رمز جدید وارد شو.",
+          bad: "این لینک معتبر نیست یا منقضی شده است. به Livegift برگرد و دوباره «رمز را فراموش کردی؟» را بزن.",
+          fail: "رمز عوض نشد. دوباره تلاش کن.", same: "رمزی انتخاب کن که قبلاً استفاده نکرده‌ای." }
+  };
+
+  var lang = "en";
+  try { var s = localStorage.getItem("lg_lang"); if (s && T[s]) lang = s; else {
+    var n = (navigator.language || "en").slice(0, 2); if (T[n]) lang = n; } } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  var state = "form";            // form | ok | bad
+
+  function render() {
+    var t = T[lang];
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "fa" ? "rtl" : "ltr";
+    $("t_title").textContent = t.title; $("t_intro").textContent = t.intro;
+    $("t_p1").textContent = t.p1; $("t_p2").textContent = t.p2; $("go").textContent = t.go;
+    document.querySelectorAll(".lang button").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.dataset.l === lang ? "true" : "false"); });
+    $("form").hidden = state !== "form";
+    if (state === "ok") { $("msg").className = "msg ok"; $("msg").textContent = t.ok; }
+    else if (state === "bad") { $("msg").className = "msg err"; $("msg").textContent = t.bad; }
+  }
+  document.querySelectorAll(".lang button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      lang = b.dataset.l; try { localStorage.setItem("lg_lang", lang); } catch (e) {}
+      render(); });
+  });
+
+  // The link from the e-mail brings the one-time token in the URL fragment (#access_token=...).
+  var params = new URLSearchParams(location.hash.replace(/^#/, ""));
+  var token = params.get("access_token");
+  var isRecovery = params.get("type") === "recovery";
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}   // remove token from the address bar
+  if (!token || !isRecovery) state = "bad";
+  render();
+
+  function say(cls, text) { $("msg").className = "msg " + cls; $("msg").textContent = text; }
+
+  $("form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var t = T[lang], a = $("p1").value, b = $("p2").value;
+    if (a.length < 6) return say("err", t.short);
+    if (a !== b) return say("err", t.diff);
+    $("go").disabled = true; say("", "…");
+    fetch(API + "/auth/v1/user", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": "Bearer " + token },
+      body: JSON.stringify({ password: a })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, j: j }; });
+    }).then(function (res) {
+      if (res.ok) { state = "ok"; token = null; $("p1").value = ""; $("p2").value = ""; render(); return; }
+      var m = ((res.j && (res.j.msg || res.j.message || res.j.error_description)) || "").toLowerCase();
+      if (res.status === 401 || res.status === 403) { state = "bad"; render(); return; }
+      if (m.indexOf("different") >= 0 || m.indexOf("same") >= 0) say("err", t.same); else say("err", t.fail);
+      $("go").disabled = false;
+    }).catch(function () { say("err", t.fail); $("go").disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>
